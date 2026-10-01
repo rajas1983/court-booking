@@ -19,15 +19,35 @@ import {
   Award,
   ChevronRight,
   CheckSquare,
-  Square
+  Square,
+  Mail,
+  Lock,
+  User,
+  Phone
 } from 'lucide-react';
 
 export default function App() {
   // --- AUTH STATE ---
-  const [user, setUser] = useState(null); // { email, role: 'admin' | 'customer' }
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [user, setUser] = useState(null); // { email, role: 'admin' | 'customer', firstName, lastName }
+  const [authMode, setAuthMode] = useState('login'); // 'login', 'register', 'verify'
+  
+  // Login Inputs
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+
+  // Register Inputs
+  const [regFirstName, setRegFirstName] = useState('');
+  const [regLastName, setRegLastName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regDob, setRegDob] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+
+  // Verification State
+  const [pendingUser, setPendingUser] = useState(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [simulatedCode, setSimulatedCode] = useState('');
+  const [enteredCode, setEnteredCode] = useState('');
 
   // --- NAVIGATION STATE ---
   const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'bookings', 'pricing', 'expenses', 'reports'
@@ -74,28 +94,62 @@ export default function App() {
 
   // --- MULTI-SLOT CART STATE ---
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedSlotsCart, setSelectedSlotsCart] = useState([]); // Array of { courtId, time, courtType, amount }
+  const [selectedSlotsCart, setSelectedSlotsCart] = useState([]); 
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
   // --- ADMIN MANUAL MULTI-BOOKING MODAL STATE ---
   const [showAdminAddModal, setShowAdminAddModal] = useState(false);
   const [adminCustomer, setAdminCustomer] = useState('');
-  const [adminCart, setAdminCart] = useState([]); // Array of { courtId, time, courtType, amount }
+  const [adminCart, setAdminCart] = useState([]); 
 
   // --- REPORT PERIOD FILTER ---
   const [reportPeriod, setReportPeriod] = useState('all');
 
   // --- AUTH HANDLERS ---
-  const handleAuth = (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
     if (!emailInput || !passwordInput) return;
 
     if (emailInput === 'admin@sports.com') {
-      setUser({ email: emailInput, role: 'admin' });
-      setActiveTab('calendar');
+      setUser({ email: emailInput, role: 'admin', firstName: 'System', lastName: 'Admin' });
     } else {
-      setUser({ email: emailInput, role: 'customer' });
+      setUser({ email: emailInput, role: 'customer', firstName: 'Valued', lastName: 'Customer' });
+    }
+    setActiveTab('calendar');
+  };
+
+  const handleStartRegistration = (e) => {
+    e.preventDefault();
+    if (!regFirstName || !regLastName || !regPhone || !regDob || !regEmail || !regPassword) return;
+
+    // Generate a simulated 6-digit verification code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setSimulatedCode(code);
+
+    // Save pending user data
+    setPendingUser({
+      firstName: regFirstName,
+      lastName: regLastName,
+      phone: regPhone,
+      dob: regDob,
+      email: regEmail,
+      password: regPassword,
+      role: 'customer'
+    });
+
+    // Switch to verification view
+    setAuthMode('verify');
+  };
+
+  const handleVerifyEmail = (e) => {
+    e.preventDefault();
+    if (enteredCode.trim() === simulatedCode) {
+      setUser(pendingUser);
+      setAuthMode('login');
       setActiveTab('calendar');
+      alert('Email verified successfully! Welcome to AceCourt Arena.');
+    } else {
+      alert('Invalid verification code. Please check the simulated notice box.');
     }
   };
 
@@ -104,6 +158,7 @@ export default function App() {
     setEmailInput('');
     setPasswordInput('');
     setSelectedSlotsCart([]);
+    setAuthMode('login');
   };
 
   // --- BOOKING LOGIC ---
@@ -117,11 +172,8 @@ export default function App() {
 
     const existingIndex = selectedSlotsCart.findIndex(s => s.courtId === courtId && s.time === time);
     if (existingIndex > -1) {
-      // Remove from cart if already selected
-      setSelectedSlotsCart(selectedSlotsCart.filter((_, idx) => idx !== idx === existingIndex ? false : true));
       setSelectedSlotsCart(prev => prev.filter((_, idx) => idx !== existingIndex));
     } else {
-      // Add to cart
       setSelectedSlotsCart(prev => [...prev, { courtId, time, courtType: court.type, amount, courtName: court.name }]);
     }
   };
@@ -134,7 +186,7 @@ export default function App() {
       courtId: slot.courtId,
       date: selectedDate,
       time: slot.time,
-      customer: user.email,
+      customer: `${user.firstName} ${user.lastName} (${user.email})`,
       status: 'Confirmed',
       payment: 'Paid',
       amount: slot.amount
@@ -233,13 +285,13 @@ export default function App() {
   const { filteredBookings, filteredExpenses, totalIncome, totalExpense, netProfit } = getFilteredData();
 
 
-  // ================= RENDER LOGIN PAGE =================
+  // ================= RENDER AUTHENTICATION & REGISTRATION PAGE =================
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 lg:p-8 font-sans">
         <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
           
-          <div className="lg:col-span-7 relative bg-gradient-to-br from-emerald-950 via-slate-900 to-blue-950 p-8 lg:p-12 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800">
+          <div className="lg:col-span-6 relative bg-gradient-to-br from-emerald-950 via-slate-900 to-blue-950 p-8 lg:p-10 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800">
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
             <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
 
@@ -250,93 +302,239 @@ export default function App() {
               <span className="text-xl font-black tracking-wider text-white uppercase">AceCourt Arena</span>
             </div>
 
-            <div className="relative z-10 my-12 space-y-6">
+            <div className="relative z-10 my-8 space-y-5">
               <div className="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 <Award className="w-4 h-4" />
                 <span>Premier Indoor Sports Facility</span>
               </div>
 
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-none">
+              <h1 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
                 Smash. Rally. <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Dominate the Court.</span>
               </h1>
 
-              <p className="text-slate-300 text-sm lg:text-base max-w-md leading-relaxed">
-                Experience high-performance indoor action. Book multiple tournament-grade professional surfaces instantly in a single transaction.
+              <p className="text-slate-300 text-sm max-w-md leading-relaxed">
+                Experience high-performance indoor action. Register now with secure email verification to book professional surfaces instantly.
               </p>
 
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
-                  <span className="text-emerald-400 font-bold block text-lg">2 Courts</span>
-                  <span className="text-xs text-slate-400 uppercase font-semibold">Pro Badminton</span>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl backdrop-blur">
+                  <span className="text-emerald-400 font-bold block text-base">2 Courts</span>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold">Pro Badminton</span>
                 </div>
-                <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
-                  <span className="text-cyan-400 font-bold block text-lg">2 Courts</span>
-                  <span className="text-xs text-slate-400 uppercase font-semibold">Pro Pickleball</span>
+                <div className="bg-slate-900/80 border border-slate-800 p-3.5 rounded-2xl backdrop-blur">
+                  <span className="text-cyan-400 font-bold block text-base">2 Courts</span>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold">Pro Pickleball</span>
                 </div>
               </div>
             </div>
 
             <div className="relative z-10 text-xs text-slate-500 flex items-center justify-between">
               <span>Open Daily: 8:00 AM – 10:00 PM</span>
-              <span className="text-emerald-400 font-medium">Multi-Slot Cart Enabled</span>
+              <span className="text-emerald-400 font-medium">Verified Portal</span>
             </div>
           </div>
 
-          <div className="lg:col-span-5 p-8 lg:p-12 flex flex-col justify-center bg-slate-900">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
-              <p className="text-slate-400 text-sm mt-1">Sign in to manage bookings or reserve multiple courts.</p>
+          <div className="lg:col-span-6 p-6 lg:p-10 flex flex-col justify-center bg-slate-900">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white">
+                {authMode === 'verify' ? 'Verify Your Email' : authMode === 'register' ? 'Create Account' : 'Welcome Back'}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">
+                {authMode === 'verify' 
+                  ? 'We have sent a verification code to your email address.' 
+                  : authMode === 'register' 
+                  ? 'Enter your personal details to set up your profile.' 
+                  : 'Sign in to manage bookings or reserve courts.'}
+              </p>
             </div>
 
-            <div className="flex bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800">
-              <button 
-                onClick={() => setAuthMode('login')} 
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'login' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
-              >
-                Sign In
-              </button>
-              <button 
-                onClick={() => setAuthMode('register')} 
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
-              >
-                Register
-              </button>
-            </div>
-
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1.5">Email Address</label>
-                <input 
-                  type="email" 
-                  required
-                  placeholder="e.g. admin@sports.com" 
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors"
-                />
-                <p className="text-[11px] text-slate-500 mt-1.5">Hint: Use <code className="text-blue-400">admin@sports.com</code> for admin access.</p>
+            {authMode !== 'verify' && (
+              <div className="flex bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800">
+                <button 
+                  onClick={() => setAuthMode('login')} 
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'login' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Sign In
+                </button>
+                <button 
+                  onClick={() => setAuthMode('register')} 
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Register
+                </button>
               </div>
+            )}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase mb-1.5">Password</label>
-                <input 
-                  type="password" 
-                  required
-                  placeholder="••••••••" 
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
+            {/* --- VIEW 1: SIGN IN FORM --- */}
+            {authMode === 'login' && (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1.5">Email Address</label>
+                  <input 
+                    type="email" 
+                    required
+                    placeholder="e.g. admin@sports.com" 
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1.5">Hint: Use <code className="text-blue-400">admin@sports.com</code> for admin access.</p>
+                </div>
 
-              <button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 mt-4"
-              >
-                <span>{authMode === 'login' ? 'Access Portal' : 'Create Account'}</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </form>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1.5">Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    placeholder="••••••••" 
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 mt-2"
+                >
+                  <span>Access Portal</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+
+            {/* --- VIEW 2: DETAILED REGISTRATION FORM --- */}
+            {authMode === 'register' && (
+              <form onSubmit={handleStartRegistration} className="space-y-3.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">First Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="John" 
+                      value={regFirstName}
+                      onChange={(e) => setRegFirstName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Last Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="Doe" 
+                      value={regLastName}
+                      onChange={(e) => setRegLastName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Phone Number</label>
+                    <input 
+                      type="tel" 
+                      required
+                      placeholder="(555) 000-0000" 
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Date of Birth</label>
+                    <input 
+                      type="date" 
+                      required
+                      value={regDob}
+                      onChange={(e) => setRegDob(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Email ID</label>
+                  <input 
+                    type="email" 
+                    required
+                    placeholder="john.doe@example.com" 
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Password</label>
+                  <input 
+                    type="password" 
+                    required
+                    placeholder="••••••••" 
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 mt-1"
+                >
+                  <span>Continue & Verify Email</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </form>
+            )}
+
+            {/* --- VIEW 3: EMAIL VERIFICATION STEP --- */}
+            {authMode === 'verify' && (
+              <form onSubmit={handleVerifyEmail} className="space-y-4">
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-300 space-y-2">
+                  <div className="flex items-center space-x-2 font-bold text-blue-400">
+                    <Mail className="w-4 h-4" />
+                    <span>Verification Email Dispatched</span>
+                  </div>
+                  <p>We sent a 6-digit verification code to <span className="text-white font-semibold">{pendingUser?.email}</span>.</p>
+                  <div className="bg-slate-950 p-2.5 rounded-xl border border-blue-500/20 text-slate-300 text-[11px]">
+                    <span className="text-amber-400 font-bold block mb-0.5">Simulation Notice:</span>
+                    Your verification code is: <strong className="text-emerald-400 tracking-widest text-sm">{simulatedCode}</strong>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1.5">Enter 6-Digit Code</label>
+                  <input 
+                    type="text" 
+                    maxLength="6"
+                    required
+                    placeholder="123456" 
+                    value={enteredCode}
+                    onChange={(e) => setEnteredCode(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-center tracking-widest text-lg font-mono text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex space-x-3">
+                  <button 
+                    type="button"
+                    onClick={() => setAuthMode('register')}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl text-xs transition-all"
+                  >
+                    Back
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition-all shadow-lg shadow-emerald-600/30"
+                  >
+                    Verify & Complete
+                  </button>
+                </div>
+              </form>
+            )}
+
           </div>
 
         </div>
@@ -365,7 +563,7 @@ export default function App() {
           <div className="flex items-center space-x-4">
             <div className="hidden sm:flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 text-xs">
               <div className={`w-2 h-2 rounded-full ${isAdmin ? 'bg-amber-400' : 'bg-emerald-400'}`}></div>
-              <span className="text-slate-300">{user.email}</span>
+              <span className="text-slate-300">{user.firstName ? `${user.firstName} ${user.lastName}` : user.email}</span>
               <span className="bg-slate-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold text-slate-200">
                 {user.role}
               </span>
@@ -451,13 +649,12 @@ export default function App() {
                     value={selectedDate}
                     onChange={(e) => {
                       setSelectedDate(e.target.value);
-                      setSelectedSlotsCart([]); // Reset cart on date change
+                      setSelectedSlotsCart([]); 
                     }}
                     className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
-                {/* CART CHECKOUT BUTTON */}
                 <button
                   onClick={() => setShowCheckoutModal(true)}
                   disabled={selectedSlotsCart.length === 0}
@@ -479,7 +676,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* PRICING BANNER */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
                 <div>
@@ -498,7 +694,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* AVAILABILITY GRID WITH MULTI-SELECT CHECKBOXES */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
@@ -586,7 +781,7 @@ export default function App() {
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-sm">
                     {bookings
-                      .filter(b => isAdmin || b.customer === user.email)
+                      .filter(b => isAdmin || b.customer.includes(user.email))
                       .map(b => {
                         const courtObj = courts.find(c => c.id === b.courtId);
                         return (
@@ -817,7 +1012,7 @@ export default function App() {
 
       </main>
 
-      {/* MODAL: CHECKOUT CART FOR MULTI-SLOT BOOKINGS */}
+      {/* MODAL: CHECKOUT CART */}
       {showCheckoutModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-6">
@@ -871,7 +1066,7 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL: ADMIN MANUAL MULTI-SLOT BOOKING */}
+      {/* MODAL: ADMIN MULTI-SLOT BOOKING */}
       {showAdminAddModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-6">
