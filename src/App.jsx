@@ -103,7 +103,7 @@ export default function App() {
     e.preventDefault();
     if (!emailInput || !passwordInput) return;
 
-    if (emailInput === 'admin@sports.com') {
+    if (emailInput === 'adminraja@simbasports.com' && passwordInput === 'Login2raja') {
       setUser({ email: emailInput, role: 'admin', firstName: 'System', lastName: 'Admin' });
     } else {
       setUser({ email: emailInput, role: 'customer', firstName: 'Valued', lastName: 'Customer' });
