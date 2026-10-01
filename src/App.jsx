@@ -440,16 +440,16 @@ export default function App() {
                       className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Date of Birth</label>
-                    <input 
-                      type="date" 
-                      required
-                      value={regDob}
-                      onChange={(e) => setRegDob(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
+            <div>
+  <label className="block text-[11px] font-bold text-slate-300 uppercase mb-1">Date of Birth</label>
+  <input 
+    type="date" 
+    required
+    value={regDob}
+    onChange={(e) => setRegDob(e.target.value)}
+    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+  />
+</div>
                 </div>
 
                 <div>
