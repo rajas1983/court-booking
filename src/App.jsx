@@ -14,7 +14,10 @@ import {
   TrendingUp, 
   TrendingDown, 
   BarChart2, 
-  AlertCircle 
+  AlertCircle,
+  Zap,
+  Award,
+  ChevronRight
 } from 'lucide-react';
 
 export default function App() {
@@ -202,67 +205,116 @@ export default function App() {
   const { filteredBookings, filteredExpenses, totalIncome, totalExpense, netProfit } = getFilteredData();
 
 
-  // ================= RENDER LOGIN / REGISTER =================
+  // ================= RENDER FANCY LOGIN / REGISTER PAGE =================
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-8 shadow-2xl text-slate-100">
-          <div className="text-center mb-8">
-            <div className="bg-blue-600 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/30">
-              <CalendarIcon className="w-6 h-6 text-white" />
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 lg:p-8 font-sans">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+          
+          {/* LEFT COLUMN: FANCY PICKLEBALL & BADMINTON POSTER */}
+          <div className="lg:col-span-7 relative bg-gradient-to-br from-emerald-950 via-slate-900 to-blue-950 p-8 lg:p-12 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800">
+            {/* Background glowing ambient blobs */}
+            <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+            <div className="relative z-10 flex items-center space-x-3">
+              <div className="bg-gradient-to-tr from-emerald-500 to-blue-600 p-3 rounded-2xl shadow-lg shadow-emerald-500/20 text-white">
+                <Zap className="w-6 h-6" />
+              </div>
+              <span className="text-xl font-black tracking-wider text-white uppercase">AceCourt Arena</span>
             </div>
-            <h1 className="text-2xl font-bold">AceCourt Portal</h1>
-            <p className="text-slate-400 text-sm mt-1">Badminton & Pickleball Online Booking</p>
+
+            <div className="relative z-10 my-12 space-y-6">
+              <div className="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 px-3.5 py-1.5 rounded-full text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <Award className="w-4 h-4" />
+                <span>Premier Indoor Sports Facility</span>
+              </div>
+
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-none">
+                Smash. Rally. <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Dominate the Court.</span>
+              </h1>
+
+              <p className="text-slate-300 text-sm lg:text-base max-w-md leading-relaxed">
+                Experience high-performance indoor action. Book tournament-grade professional surfaces instantly for your next match.
+              </p>
+
+              {/* POSTER HIGHLIGHT CARDS */}
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
+                  <span className="text-emerald-400 font-bold block text-lg">2 Courts</span>
+                  <span className="text-xs text-slate-400 uppercase font-semibold">Pro Badminton</span>
+                </div>
+                <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
+                  <span className="text-cyan-400 font-bold block text-lg">2 Courts</span>
+                  <span className="text-xs text-slate-400 uppercase font-semibold">Pro Pickleball</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative z-10 text-xs text-slate-500 flex items-center justify-between">
+              <span>Open Daily: 8:00 AM – 10:00 PM</span>
+              <span className="text-emerald-400 font-medium">Instant Online Booking</span>
+            </div>
           </div>
 
-          <div className="flex bg-slate-900 p-1 rounded-xl mb-6">
-            <button 
-              onClick={() => setAuthMode('login')} 
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${authMode === 'login' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
-            >
-              Sign In
-            </button>
-            <button 
-              onClick={() => setAuthMode('register')} 
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${authMode === 'register' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
-            >
-              Register
-            </button>
+          {/* RIGHT COLUMN: LOGIN FORM */}
+          <div className="lg:col-span-5 p-8 lg:p-12 flex flex-col justify-center bg-slate-900">
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
+              <p className="text-slate-400 text-sm mt-1">Sign in to manage bookings or reserve courts.</p>
+            </div>
+
+            <div className="flex bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800">
+              <button 
+                onClick={() => setAuthMode('login')} 
+                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'login' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
+              >
+                Sign In
+              </button>
+              <button 
+                onClick={() => setAuthMode('register')} 
+                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
+              >
+                Register
+              </button>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1.5">Email Address</label>
+                <input 
+                  type="email" 
+                  required
+                  placeholder="e.g. admin@sports.com" 
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+                <p className="text-[11px] text-slate-500 mt-1.5">Hint: Use <code className="text-blue-400">admin@sports.com</code> for admin access.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase mb-1.5">Password</label>
+                <input 
+                  type="password" 
+                  required
+                  placeholder="••••••••" 
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 mt-4"
+              >
+                <span>{authMode === 'login' ? 'Access Portal' : 'Create Account'}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </form>
           </div>
 
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase mb-1">Email Address</label>
-              <input 
-                type="email" 
-                required
-                placeholder="e.g. admin@sports.com or user@gmail.com" 
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-              />
-              <p className="text-[11px] text-slate-500 mt-1">Hint: Use <code className="text-blue-400">admin@sports.com</code> for admin access.</p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 uppercase mb-1">Password</label>
-              <input 
-                type="password" 
-                required
-                placeholder="••••••••" 
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg shadow-blue-600/30 mt-2"
-            >
-              {authMode === 'login' ? 'Sign In to Portal' : 'Create Account'}
-            </button>
-          </form>
         </div>
       </div>
     );
