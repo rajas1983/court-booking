@@ -351,22 +351,15 @@ export default function App() {
               </p>
             </div>
 
-            {authMode !== 'verify' && (
-              <div className="flex bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800">
-                <button 
-                  onClick={() => setAuthMode('login')} 
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'login' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
-                >
-                  Sign In
-                </button>
-                <button 
-                  onClick={() => setAuthMode('register')} 
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
-                >
-                  Register
-                </button>
-              </div>
-            )}
+           {authMode === 'verify' && (
+  <form onSubmit={handleVerifyEmail} className="space-y-4">
+    <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-300 space-y-2">
+      <p className="font-bold text-blue-400">Check Your Inbox</p>
+      <p>We have sent a real 6-digit code to <span className="text-white font-semibold">{pendingUser?.email}</span>. Please enter it below.</p>
+    </div>
+    {/* Input box and buttons follow here */}
+  </form>
+)}
 
             {/* --- VIEW 1: SIGN IN FORM --- */}
             {authMode === 'login' && (
