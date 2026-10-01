@@ -2,33 +2,26 @@ import React, { useState } from 'react';
 import { 
   Calendar as CalendarIcon, 
   DollarSign, 
-  Settings, 
   Users, 
   Plus, 
   Trash2, 
-  CheckCircle, 
   Clock, 
   LogOut, 
-  Shield, 
   FileText, 
   TrendingUp, 
   TrendingDown, 
   BarChart2, 
-  AlertCircle,
   Zap,
   Award,
   ChevronRight,
   CheckSquare,
   Square,
-  Mail,
-  Lock,
-  User,
-  Phone
+  Mail
 } from 'lucide-react';
 
 export default function App() {
   // --- AUTH STATE ---
-  const [user, setUser] = useState(null); // { email, role: 'admin' | 'customer', firstName, lastName }
+  const [user, setUser] = useState(null); 
   const [authMode, setAuthMode] = useState('login'); // 'login', 'register', 'verify'
   
   // Login Inputs
@@ -45,12 +38,12 @@ export default function App() {
 
   // Verification State
   const [pendingUser, setPendingUser] = useState(null);
-  const [verificationCode, setVerificationCode] = useState('');
   const [simulatedCode, setSimulatedCode] = useState('');
   const [enteredCode, setEnteredCode] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // --- NAVIGATION STATE ---
-  const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'bookings', 'pricing', 'expenses', 'reports'
+  const [activeTab, setActiveTab] = useState('calendar'); 
 
   // --- COURTS CONFIGURATION ---
   const courts = [
@@ -119,30 +112,43 @@ export default function App() {
   };
 
   const handleStartRegistration = async (e) => {
-  e.preventDefault();
-  if (!regFirstName || !regLastName || !regPhone || !regDob || !regEmail || !regPassword) return;
+    e.preventDefault();
+    if (!regFirstName || !regLastName || !regPhone || !regDob || !regEmail || !regPassword) return;
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setSimulatedCode(code);
+    setIsSendingEmail(true);
 
-  try {
-    const response = await fetch('/api/send-code', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: regEmail, code, firstName: regFirstName }),
-    });
+    try {
+      const response = await fetch('/api/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: regEmail, code, firstName: regFirstName }),
+      });
 
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Failed to send email');
+      const result = await response.json();
 
-    setPendingUser({
-      firstName: regFirstName, lastName: regLastName, phone: regPhone, 
-      dob: regDob, email: regEmail, password: regPassword, role: 'customer'
-    });
-    setAuthMode('verify');
-  } catch (error) {
-    alert(`Error: ${error.message}`);
-  }
-};
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to dispatch email');
+      }
+
+      setPendingUser({
+        firstName: regFirstName,
+        lastName: regLastName,
+        phone: regPhone,
+        dob: regDob,
+        email: regEmail,
+        password: regPassword,
+        role: 'customer'
+      });
+
+      setAuthMode('verify');
+    } catch (error) {
+      alert(`Error sending verification email: ${error.message}`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   const handleVerifyEmail = (e) => {
     e.preventDefault();
@@ -152,7 +158,7 @@ export default function App() {
       setActiveTab('calendar');
       alert('Email verified successfully! Welcome to AceCourt Arena.');
     } else {
-      alert('Invalid verification code. Please check the simulated notice box.');
+      alert('Invalid verification code. Please check your email inbox.');
     }
   };
 
@@ -199,18 +205,6 @@ export default function App() {
     setSelectedSlotsCart([]);
     setShowCheckoutModal(false);
     alert(`Successfully booked ${newBookings.length} court slot(s) in a single transaction!`);
-  };
-
-  const handleAdminToggleCart = (courtId, time) => {
-    const court = courts.find(c => c.id === courtId);
-    const amount = prices[court.type];
-
-    const existingIndex = adminCart.findIndex(s => s.courtId === courtId && s.time === time);
-    if (existingIndex > -1) {
-      setAdminCart(prev => prev.filter((_, idx) => idx !== existingIndex));
-    } else {
-      setAdminCart(prev => [...prev, { courtId, time, courtType: court.type, amount, courtName: court.name }]);
-    }
   };
 
   const handleAdminMultiBook = (e) => {
@@ -344,22 +338,29 @@ export default function App() {
               </h2>
               <p className="text-slate-400 text-xs mt-1">
                 {authMode === 'verify' 
-                  ? 'We have sent a verification code to your email address.' 
+                  ? 'We have sent a verification code to your email inbox.' 
                   : authMode === 'register' 
                   ? 'Enter your personal details to set up your profile.' 
                   : 'Sign in to manage bookings or reserve courts.'}
               </p>
             </div>
 
-           {authMode === 'verify' && (
-  <form onSubmit={handleVerifyEmail} className="space-y-4">
-    <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-300 space-y-2">
-      <p className="font-bold text-blue-400">Check Your Inbox</p>
-      <p>We have sent a real 6-digit code to <span className="text-white font-semibold">{pendingUser?.email}</span>. Please enter it below.</p>
-    </div>
-    {/* Input box and buttons follow here */}
-  </form>
-)}
+            {authMode !== 'verify' && (
+              <div className="flex bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800">
+                <button 
+                  onClick={() => setAuthMode('login')} 
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'login' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Sign In
+                </button>
+                <button 
+                  onClick={() => setAuthMode('register')} 
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Register
+                </button>
+              </div>
+            )}
 
             {/* --- VIEW 1: SIGN IN FORM --- */}
             {authMode === 'login' && (
@@ -477,9 +478,10 @@ export default function App() {
 
                 <button 
                   type="submit" 
+                  disabled={isSendingEmail}
                   className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 mt-1"
                 >
-                  <span>Continue & Verify Email</span>
+                  <span>{isSendingEmail ? 'Sending Verification Code...' : 'Continue & Verify Email'}</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </form>
@@ -491,13 +493,9 @@ export default function App() {
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-300 space-y-2">
                   <div className="flex items-center space-x-2 font-bold text-blue-400">
                     <Mail className="w-4 h-4" />
-                    <span>Verification Email Dispatched</span>
+                    <span>Check Your Inbox</span>
                   </div>
-                  <p>We sent a 6-digit verification code to <span className="text-white font-semibold">{pendingUser?.email}</span>.</p>
-                  <div className="bg-slate-950 p-2.5 rounded-xl border border-blue-500/20 text-slate-300 text-[11px]">
-                    <span className="text-amber-400 font-bold block mb-0.5">Simulation Notice:</span>
-                    Your verification code is: <strong className="text-emerald-400 tracking-widest text-sm">{simulatedCode}</strong>
-                  </div>
+                  <p>We have sent a real 6-digit verification code to <span className="text-white font-semibold">{pendingUser?.email}</span>. Please check your email and enter the code below.</p>
                 </div>
 
                 <div>
