@@ -118,28 +118,31 @@ export default function App() {
     setActiveTab('calendar');
   };
 
-  const handleStartRegistration = (e) => {
-    e.preventDefault();
-    if (!regFirstName || !regLastName || !regPhone || !regDob || !regEmail || !regPassword) return;
+  const handleStartRegistration = async (e) => {
+  e.preventDefault();
+  if (!regFirstName || !regLastName || !regPhone || !regDob || !regEmail || !regPassword) return;
 
-    // Generate a simulated 6-digit verification code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setSimulatedCode(code);
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Save pending user data
-    setPendingUser({
-      firstName: regFirstName,
-      lastName: regLastName,
-      phone: regPhone,
-      dob: regDob,
-      email: regEmail,
-      password: regPassword,
-      role: 'customer'
+  try {
+    const response = await fetch('/api/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: regEmail, code, firstName: regFirstName }),
     });
 
-    // Switch to verification view
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send email');
+
+    setPendingUser({
+      firstName: regFirstName, lastName: regLastName, phone: regPhone, 
+      dob: regDob, email: regEmail, password: regPassword, role: 'customer'
+    });
     setAuthMode('verify');
-  };
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+};
 
   const handleVerifyEmail = (e) => {
     e.preventDefault();
