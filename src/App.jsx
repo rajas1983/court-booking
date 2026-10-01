@@ -17,7 +17,9 @@ import {
   AlertCircle,
   Zap,
   Award,
-  ChevronRight
+  ChevronRight,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 export default function App() {
@@ -27,7 +29,7 @@ export default function App() {
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
 
-  // --- NAVIGATION STATE (Admin vs Customer) ---
+  // --- NAVIGATION STATE ---
   const [activeTab, setActiveTab] = useState('calendar'); // 'calendar', 'bookings', 'pricing', 'expenses', 'reports'
 
   // --- COURTS CONFIGURATION ---
@@ -45,7 +47,7 @@ export default function App() {
     '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM'
   ];
 
-  // --- PRICING CONFIGURATION (Admin adjustable) ---
+  // --- PRICING CONFIGURATION ---
   const [prices, setPrices] = useState({
     badminton: 25,
     pickleball: 20
@@ -70,19 +72,18 @@ export default function App() {
   const [newExpAmount, setNewExpAmount] = useState('');
   const [newExpDate, setNewExpDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // --- INTERACTIVE BOOKING MODAL STATE ---
-  const [selectedSlot, setSelectedSlot] = useState(null); // { court, time }
+  // --- MULTI-SLOT CART STATE ---
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedSlotsCart, setSelectedSlotsCart] = useState([]); // Array of { courtId, time, courtType, amount }
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
-  // --- ADMIN MANUAL BOOKING MODAL STATE ---
+  // --- ADMIN MANUAL MULTI-BOOKING MODAL STATE ---
   const [showAdminAddModal, setShowAdminAddModal] = useState(false);
-  const [adminCourt, setAdminCourt] = useState('B1');
-  const [adminDate, setAdminDate] = useState(new Date().toISOString().split('T')[0]);
-  const [adminTime, setAdminTime] = useState('08:00 AM');
   const [adminCustomer, setAdminCustomer] = useState('');
+  const [adminCart, setAdminCart] = useState([]); // Array of { courtId, time, courtType, amount }
 
   // --- REPORT PERIOD FILTER ---
-  const [reportPeriod, setReportPeriod] = useState('all'); // 'all', 'today', 'month'
+  const [reportPeriod, setReportPeriod] = useState('all');
 
   // --- AUTH HANDLERS ---
   const handleAuth = (e) => {
@@ -102,6 +103,7 @@ export default function App() {
     setUser(null);
     setEmailInput('');
     setPasswordInput('');
+    setSelectedSlotsCart([]);
   };
 
   // --- BOOKING LOGIC ---
@@ -109,47 +111,73 @@ export default function App() {
     return bookings.find(b => b.courtId === courtId && b.date === date && b.time === time && b.status !== 'Cancelled');
   };
 
-  const handleCustomerBook = () => {
-    if (!selectedSlot) return;
-    const court = courts.find(c => c.id === selectedSlot.court);
+  const toggleSlotSelection = (courtId, time) => {
+    const court = courts.find(c => c.id === courtId);
     const amount = prices[court.type];
 
-    const newBooking = {
-      id: `B-${Math.floor(100 + Math.random() * 900)}`,
-      courtId: selectedSlot.court,
+    const existingIndex = selectedSlotsCart.findIndex(s => s.courtId === courtId && s.time === time);
+    if (existingIndex > -1) {
+      // Remove from cart if already selected
+      setSelectedSlotsCart(selectedSlotsCart.filter((_, idx) => idx !== idx === existingIndex ? false : true));
+      setSelectedSlotsCart(prev => prev.filter((_, idx) => idx !== existingIndex));
+    } else {
+      // Add to cart
+      setSelectedSlotsCart(prev => [...prev, { courtId, time, courtType: court.type, amount, courtName: court.name }]);
+    }
+  };
+
+  const handleCustomerMultiBook = () => {
+    if (selectedSlotsCart.length === 0) return;
+
+    const newBookings = selectedSlotsCart.map(slot => ({
+      id: `B-${Math.floor(1000 + Math.random() * 9000)}`,
+      courtId: slot.courtId,
       date: selectedDate,
-      time: selectedSlot.time,
+      time: slot.time,
       customer: user.email,
       status: 'Confirmed',
       payment: 'Paid',
-      amount: amount
-    };
+      amount: slot.amount
+    }));
 
-    setBookings([...bookings, newBooking]);
-    setSelectedSlot(null);
-    alert('Court booked successfully!');
+    setBookings(prev => [...prev, ...newBookings]);
+    setSelectedSlotsCart([]);
+    setShowCheckoutModal(false);
+    alert(`Successfully booked ${newBookings.length} court slot(s) in a single transaction!`);
   };
 
-  const handleAdminAddBooking = (e) => {
-    e.preventDefault();
-    if (!adminCustomer) return;
-    const court = courts.find(c => c.id === adminCourt);
+  const handleAdminToggleCart = (courtId, time) => {
+    const court = courts.find(c => c.id === courtId);
     const amount = prices[court.type];
 
-    const newBooking = {
-      id: `B-${Math.floor(100 + Math.random() * 900)}`,
-      courtId: adminCourt,
-      date: adminDate,
-      time: adminTime,
+    const existingIndex = adminCart.findIndex(s => s.courtId === courtId && s.time === time);
+    if (existingIndex > -1) {
+      setAdminCart(prev => prev.filter((_, idx) => idx !== existingIndex));
+    } else {
+      setAdminCart(prev => [...prev, { courtId, time, courtType: court.type, amount, courtName: court.name }]);
+    }
+  };
+
+  const handleAdminMultiBook = (e) => {
+    e.preventDefault();
+    if (!adminCustomer || adminCart.length === 0) return;
+
+    const newBookings = adminCart.map(slot => ({
+      id: `B-${Math.floor(1000 + Math.random() * 9000)}`,
+      courtId: slot.courtId,
+      date: selectedDate,
+      time: slot.time,
       customer: adminCustomer,
       status: 'Confirmed',
       payment: 'Paid',
-      amount: amount
-    };
+      amount: slot.amount
+    }));
 
-    setBookings([...bookings, newBooking]);
+    setBookings(prev => [...prev, ...newBookings]);
+    setAdminCart([]);
     setShowAdminAddModal(false);
     setAdminCustomer('');
+    alert(`Successfully processed admin multi-slot booking for ${adminCustomer}!`);
   };
 
   const cancelBooking = (id) => {
@@ -180,7 +208,7 @@ export default function App() {
   // --- FINANCIAL REPORT CALCULATIONS ---
   const getFilteredData = () => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const currentMonthStr = todayStr.substring(0, 7); // YYYY-MM
+    const currentMonthStr = todayStr.substring(0, 7);
 
     const filteredBookings = bookings.filter(b => {
       if (b.status === 'Cancelled') return false;
@@ -205,15 +233,13 @@ export default function App() {
   const { filteredBookings, filteredExpenses, totalIncome, totalExpense, netProfit } = getFilteredData();
 
 
-  // ================= RENDER FANCY LOGIN / REGISTER PAGE =================
+  // ================= RENDER LOGIN PAGE =================
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 lg:p-8 font-sans">
         <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
           
-          {/* LEFT COLUMN: FANCY PICKLEBALL & BADMINTON POSTER */}
           <div className="lg:col-span-7 relative bg-gradient-to-br from-emerald-950 via-slate-900 to-blue-950 p-8 lg:p-12 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800">
-            {/* Background glowing ambient blobs */}
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
             <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
 
@@ -235,10 +261,9 @@ export default function App() {
               </h1>
 
               <p className="text-slate-300 text-sm lg:text-base max-w-md leading-relaxed">
-                Experience high-performance indoor action. Book tournament-grade professional surfaces instantly for your next match.
+                Experience high-performance indoor action. Book multiple tournament-grade professional surfaces instantly in a single transaction.
               </p>
 
-              {/* POSTER HIGHLIGHT CARDS */}
               <div className="grid grid-cols-2 gap-4 pt-4">
                 <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl backdrop-blur">
                   <span className="text-emerald-400 font-bold block text-lg">2 Courts</span>
@@ -253,15 +278,14 @@ export default function App() {
 
             <div className="relative z-10 text-xs text-slate-500 flex items-center justify-between">
               <span>Open Daily: 8:00 AM – 10:00 PM</span>
-              <span className="text-emerald-400 font-medium">Instant Online Booking</span>
+              <span className="text-emerald-400 font-medium">Multi-Slot Cart Enabled</span>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: LOGIN FORM */}
           <div className="lg:col-span-5 p-8 lg:p-12 flex flex-col justify-center bg-slate-900">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-white">Welcome Back</h2>
-              <p className="text-slate-400 text-sm mt-1">Sign in to manage bookings or reserve courts.</p>
+              <p className="text-slate-400 text-sm mt-1">Sign in to manage bookings or reserve multiple courts.</p>
             </div>
 
             <div className="flex bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800">
@@ -415,25 +439,41 @@ export default function App() {
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
               <div>
-                <h2 className="text-lg font-bold">Court Availability & Calendar</h2>
-                <p className="text-xs text-slate-400">Select an available green slot to book online instantly.</p>
+                <h2 className="text-lg font-bold">Court Availability & Cart</h2>
+                <p className="text-xs text-slate-400">Select multiple available slots to add them to your cart, then check out in a single transaction.</p>
               </div>
 
-              <div className="flex items-center space-x-3">
-                <label className="text-xs font-medium text-slate-400 uppercase">Select Date:</label>
-                <input 
-                  type="date" 
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                />
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center space-x-2">
+                  <label className="text-xs font-medium text-slate-400 uppercase">Date:</label>
+                  <input 
+                    type="date" 
+                    value={selectedDate}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value);
+                      setSelectedSlotsCart([]); // Reset cart on date change
+                    }}
+                    className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* CART CHECKOUT BUTTON */}
+                <button
+                  onClick={() => setShowCheckoutModal(true)}
+                  disabled={selectedSlotsCart.length === 0}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all shadow-lg ${selectedSlotsCart.length > 0 ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                >
+                  <span>Checkout Cart</span>
+                  <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">{selectedSlotsCart.length}</span>
+                </button>
+
                 {isAdmin && (
                   <button 
                     onClick={() => setShowAdminAddModal(true)}
-                    className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-medium transition-all shadow-lg shadow-emerald-600/20"
+                    className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-xs font-medium transition-all shadow-lg shadow-blue-600/20"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Admin Add Booking</span>
+                    <span>Admin Multi-Book</span>
                   </button>
                 )}
               </div>
@@ -458,7 +498,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* AVAILABILITY GRID */}
+            {/* AVAILABILITY GRID WITH MULTI-SELECT CHECKBOXES */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
@@ -481,6 +521,8 @@ export default function App() {
                         </td>
                         {courts.map(court => {
                           const booking = isSlotBooked(court.id, selectedDate, time);
+                          const isSelectedInCart = selectedSlotsCart.some(s => s.courtId === court.id && s.time === time);
+
                           return (
                             <td key={court.id} className="p-4">
                               {booking ? (
@@ -490,11 +532,20 @@ export default function App() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => setSelectedSlot({ court: court.id, time })}
-                                  className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl p-2.5 text-xs font-semibold transition-all flex items-center justify-center space-x-1"
+                                  onClick={() => toggleSlotSelection(court.id, time)}
+                                  className={`w-full border rounded-xl p-2.5 text-xs font-semibold transition-all flex items-center justify-center space-x-1.5 ${isSelectedInCart ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-600/30' : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}
                                 >
-                                  <CheckCircle className="w-3.5 h-3.5" />
-                                  <span>Available (${prices[court.type]})</span>
+                                  {isSelectedInCart ? (
+                                    <>
+                                      <CheckSquare className="w-3.5 h-3.5" />
+                                      <span>Selected</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Square className="w-3.5 h-3.5" />
+                                      <span>Available (${prices[court.type]})</span>
+                                    </>
+                                  )}
                                 </button>
                               )}
                             </td>
@@ -509,7 +560,7 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: BOOKINGS LEDGER / MY BOOKINGS */}
+        {/* TAB 2: BOOKINGS LEDGER */}
         {activeTab === 'bookings' && (
           <div className="space-y-6">
             <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
@@ -570,13 +621,13 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: PRICING SETTINGS (Admin Only) */}
+        {/* TAB 3: PRICING SETTINGS */}
         {activeTab === 'pricing' && isAdmin && (
           <div className="space-y-6 max-w-2xl mx-auto">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
               <div>
                 <h2 className="text-lg font-bold">Dynamic Slot Pricing</h2>
-                <p className="text-xs text-slate-400 mt-1">Set hourly rates for badminton and pickleball courts. Updates reflect immediately on user calendars.</p>
+                <p className="text-xs text-slate-400 mt-1">Set hourly rates for badminton and pickleball courts.</p>
               </div>
 
               <div className="space-y-4">
@@ -605,22 +656,17 @@ export default function App() {
                     />
                   </div>
                 </div>
-
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-xs text-blue-300 flex items-start space-x-2">
-                  <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-                  <span>Changes made here apply to all future slot selections made by customers on the calendar.</span>
-                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 4: EXPENDITURE TRACKER (Admin Only) */}
+        {/* TAB 4: EXPENDITURE TRACKER */}
         {activeTab === 'expenses' && isAdmin && (
           <div className="space-y-6">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
               <h2 className="text-lg font-bold mb-1">Add Facility Expenditure</h2>
-              <p className="text-xs text-slate-400 mb-6">Log free-flow expenses (e.g. equipment maintenance, utility bills, staffing) tied to specific dates.</p>
+              <p className="text-xs text-slate-400 mb-6">Log facility expenses tied to specific dates.</p>
 
               <form onSubmit={handleAddExpense} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div className="sm:col-span-2">
@@ -670,7 +716,6 @@ export default function App() {
               </form>
             </div>
 
-            {/* EXPENSES TABLE */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
               <div className="p-4 border-b border-slate-800 font-bold text-sm">Logged Expenditure Records</div>
               <div className="overflow-x-auto">
@@ -706,7 +751,7 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 5: FINANCIAL REPORTS & P&L (Admin Only) */}
+        {/* TAB 5: FINANCIAL REPORTS & P&L */}
         {activeTab === 'reports' && isAdmin && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl">
@@ -729,7 +774,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* SUMMARY METRICS CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl flex items-center justify-between">
                 <div>
@@ -773,62 +817,70 @@ export default function App() {
 
       </main>
 
-      {/* MODAL: CUSTOMER SLOT BOOKING CONFIRMATION */}
-      {selectedSlot && (
+      {/* MODAL: CHECKOUT CART FOR MULTI-SLOT BOOKINGS */}
+      {showCheckoutModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-6">
             <div>
-              <h3 className="text-lg font-bold">Confirm Court Reservation</h3>
-              <p className="text-xs text-slate-400 mt-1">Review booking details before confirming online payment.</p>
+              <h3 className="text-lg font-bold">Confirm Multi-Slot Transaction</h3>
+              <p className="text-xs text-slate-400 mt-1">Review all selected court slots for date: <span className="text-blue-400 font-semibold">{selectedDate}</span></p>
             </div>
 
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Court:</span>
-                <span className="font-semibold">{courts.find(c => c.id === selectedSlot.court)?.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Date:</span>
-                <span className="font-semibold">{selectedDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Time Slot:</span>
-                <span className="font-semibold">{selectedSlot.time}</span>
-              </div>
-              <div className="flex justify-between border-t border-slate-800 pt-3">
-                <span className="text-slate-400 font-medium">Total Rate:</span>
-                <span className="font-bold text-emerald-400">${prices[courts.find(c => c.id === selectedSlot.court)?.type]}</span>
-              </div>
+            <div className="bg-slate-950 border border-slate-800 rounded-xl max-h-60 overflow-y-auto divide-y divide-slate-800">
+              {selectedSlotsCart.map((item, idx) => (
+                <div key={idx} className="p-3 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-semibold text-slate-200 block">{item.courtName}</span>
+                    <span className="text-slate-400">Time: {item.time}</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <span className="font-bold text-emerald-400">${item.amount}</span>
+                    <button 
+                      onClick={() => setSelectedSlotsCart(selectedSlotsCart.filter((_, i) => i !== idx))}
+                      className="text-rose-400 hover:text-rose-300 p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-800 pt-4 px-1">
+              <span className="text-sm font-medium text-slate-300">Total Combined Amount:</span>
+              <span className="text-xl font-bold text-emerald-400">
+                ${selectedSlotsCart.reduce((sum, s) => sum + s.amount, 0).toFixed(2)}
+              </span>
             </div>
 
             <div className="flex space-x-3">
               <button 
-                onClick={() => setSelectedSlot(null)}
+                onClick={() => setShowCheckoutModal(false)}
                 className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl text-sm transition-all"
               >
-                Cancel
+                Continue Selecting
               </button>
               <button 
-                onClick={handleCustomerBook}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl text-sm transition-all shadow-lg shadow-blue-600/30"
+                onClick={handleCustomerMultiBook}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-600/30"
               >
-                Confirm & Pay
+                Complete Payment ({selectedSlotsCart.length})
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: ADMIN MANUAL ADD BOOKING */}
+      {/* MODAL: ADMIN MANUAL MULTI-SLOT BOOKING */}
       {showAdminAddModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-6">
             <div>
-              <h3 className="text-lg font-bold">Admin Manual Booking</h3>
-              <p className="text-xs text-slate-400 mt-1">Book any court slot directly on behalf of a customer.</p>
+              <h3 className="text-lg font-bold">Admin Multi-Slot Booking Tool</h3>
+              <p className="text-xs text-slate-400 mt-1">Select multiple slots from the calendar behind this modal, then assign them to a customer.</p>
             </div>
 
-            <form onSubmit={handleAdminAddBooking} className="space-y-4">
+            <form onSubmit={handleAdminMultiBook} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium text-slate-300 uppercase mb-1">Customer Name / Email</label>
                 <input 
@@ -842,40 +894,28 @@ export default function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 uppercase mb-1">Court</label>
-                <select 
-                  value={adminCourt}
-                  onChange={(e) => setAdminCourt(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  {courts.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 uppercase mb-1">Date</label>
-                <input 
-                  type="date" 
-                  required
-                  value={adminDate}
-                  onChange={(e) => setAdminDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 uppercase mb-1">Time Slot</label>
-                <select 
-                  value={adminTime}
-                  onChange={(e) => setAdminTime(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500"
-                >
-                  {timeSlots.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                <label className="block text-xs font-medium text-slate-300 uppercase mb-1">Selected Slots Cart ({adminCart.length})</label>
+                <div className="bg-slate-950 border border-slate-700 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
+                  {adminCart.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic py-2 text-center">No slots selected yet. Click availability buttons on the calendar to add slots.</p>
+                  ) : (
+                    adminCart.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-xs bg-slate-900 p-2 rounded-lg border border-slate-800">
+                        <span>{item.courtName} ({item.time})</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-emerald-400 font-semibold">${item.amount}</span>
+                          <button 
+                            type="button" 
+                            onClick={() => setAdminCart(adminCart.filter((_, i) => i !== idx))}
+                            className="text-rose-400"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
               <div className="flex space-x-3 pt-2">
@@ -888,9 +928,10 @@ export default function App() {
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-600/30"
+                  disabled={adminCart.length === 0}
+                  className={`flex-1 font-medium py-3 rounded-xl text-sm transition-all shadow-lg ${adminCart.length > 0 ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
                 >
-                  Create Booking
+                  Book All ({adminCart.length}) Slots
                 </button>
               </div>
             </form>
